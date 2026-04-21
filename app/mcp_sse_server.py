@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 import uvicorn
+from mcp.server.transport_security import TransportSecuritySettings
 
 from app.main import (
     GENERATED_DIR,
@@ -19,7 +20,23 @@ from app.main import (
 from app.schemas import AgendaDocRequest
 from app.template_builder import ensure_template_exists
 
-mcp = FastMCP("llm2word-mcp")
+mcp = FastMCP(
+    "llm2word-mcp",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "127.0.0.1:8000",
+            "localhost:8000",
+            "59.110.150.224:8000",
+        ],
+        allowed_origins=[
+            "http://127.0.0.1:8000",
+            "http://localhost:8000",
+            "http://59.110.150.224:8000",
+        ],
+    ),
+)
+
 MCP_DOWNLOAD_BASE_URL = os.getenv(
     "MCP_DOWNLOAD_BASE_URL", "http://127.0.0.1:8000")
 
@@ -56,6 +73,12 @@ class MCPStyleInput(BaseModel):
     indent_level3_chars: float = Field(6.0, ge=0.0, le=16.0)
 
 
+def _normalize_style(style: MCPStyleInput | None) -> dict[str, Any]:
+    if style is None:
+        return {}
+    return style.model_dump()
+
+
 def _normalize_meta(meta: list[MCPMetaItem]) -> list[dict[str, str]]:
     return [
         {
@@ -84,7 +107,7 @@ def _normalize_agenda(agenda: list[MCPAgendaItem]) -> list[dict[str, Any]]:
         "仅接受顶层平铺参数：title/meta/agenda/style/filename；禁止使用 params 包裹层。"
         "参数类型：title(str, 必填)、meta(list[{label:str,value:str}], 必填)、"
         "agenda(list[{text:str,level:int,leading_bold?:str}], 必填)、"
-        "style(object, 可选)、filename(str, 可选)。"
+        "style(object|null, 可选)、filename(str, 可选)。"
         "示例请求：{\"title\":\"4月16日处务例会\",\"meta\":[{\"label\":\"时间\",\"value\":\"2023-04-16 14:00\"}],\"agenda\":[{\"text\":\"一、尚网办项目\",\"level\":1}],\"style\":null,\"filename\":\"4月16日处务例会议程.docx\"}。"
         "返回 code/success/message/data，其中 data 包含 file_id、filename、download_url。"
     ),
@@ -109,7 +132,7 @@ def generate_meeting_agenda_docx(
     - title: 必填，会议标题。
     - meta: 必填，类型 `list[MCPMetaItem]`，标准数组：[ {"label": "时间", "value": "2026-04-20"} ]。
     - agenda: 必填，类型 `list[MCPAgendaItem]`，标准数组项：{"text": "一、开场", "level": 1, "leading_bold": "一、"}。
-    - style: 可选，样式对象，可配置字体、字号、行距、缩进等。
+    - style: 可选，样式对象；也可传 `null`，表示使用默认样式。
     - filename: 可选，导出文件名，默认 `meeting_agenda.docx`。
 
     请求示例（平铺式）：
@@ -140,7 +163,7 @@ def generate_meeting_agenda_docx(
         "title": title,
         "meta": _normalize_meta(meta),
         "agenda": _normalize_agenda(agenda),
-        "style": {} if style is None else style.model_dump(),
+        "style": _normalize_style(style),
         "filename": filename,
     }
 
