@@ -91,3 +91,4 @@ stress_test_report_*.json
 *.pyo
 *.pyd
 app/__pycache__/mcp_sse_server.cpython-312.pyc
+*.docx
