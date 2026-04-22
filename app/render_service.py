@@ -16,10 +16,16 @@ def _set_run_font(run, font_name: str, size_pt: float, bold: bool = False) -> No
     run._element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
 
 
-def _set_paragraph_spacing(paragraph, line_spacing: float) -> None:
+def _paragraph_space_after_pt(body_size_pt: float, line_spacing: float) -> Pt:
+    return Pt(body_size_pt * line_spacing * 0.5)
+
+
+def _set_paragraph_spacing(paragraph, line_spacing: float, body_size_pt: float) -> None:
     pformat = paragraph.paragraph_format
     pformat.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
     pformat.line_spacing = line_spacing
+    pformat.space_before = Pt(0)
+    pformat.space_after = _paragraph_space_after_pt(body_size_pt, line_spacing)
 
 
 def _chars_to_pt(chars: float, body_size_pt: float) -> Pt:
@@ -39,7 +45,11 @@ def _build_meta_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
 
     for item in payload.meta:
         paragraph = subdoc.add_paragraph()
-        _set_paragraph_spacing(paragraph, payload.style.line_spacing)
+        _set_paragraph_spacing(
+            paragraph,
+            payload.style.line_spacing,
+            payload.style.body_size_pt,
+        )
 
         label_run = paragraph.add_run(f"{item.label}：")
         _set_run_font(
@@ -63,7 +73,11 @@ def _build_agenda_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
     subdoc = tpl.new_subdoc()
 
     heading = subdoc.add_paragraph()
-    _set_paragraph_spacing(heading, payload.style.line_spacing)
+    _set_paragraph_spacing(
+        heading,
+        payload.style.line_spacing,
+        payload.style.body_size_pt,
+    )
     heading_run = heading.add_run("议程：")
     _set_run_font(
         heading_run,
@@ -74,7 +88,11 @@ def _build_agenda_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
 
     for item in payload.agenda:
         paragraph = subdoc.add_paragraph()
-        _set_paragraph_spacing(paragraph, payload.style.line_spacing)
+        _set_paragraph_spacing(
+            paragraph,
+            payload.style.line_spacing,
+            payload.style.body_size_pt,
+        )
         paragraph.paragraph_format.left_indent = _indent_for_level(
             item.level, payload.style)
 
