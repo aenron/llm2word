@@ -1,10 +1,11 @@
 from io import BytesIO
 from pathlib import Path
 
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.text import WD_LINE_SPACING
 from docx.oxml.ns import qn
 from docx.shared import Pt
-from docxtpl import DocxTemplate, RichText
 
 from app.schemas import AgendaDocRequest, RenderStyle
 
@@ -40,11 +41,36 @@ def _indent_for_level(level: int, style: RenderStyle) -> Pt:
     return _chars_to_pt(style.indent_level3_chars, style.body_size_pt)
 
 
-def _build_meta_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
-    subdoc = tpl.new_subdoc()
+def _set_document_default_style(document: Document, payload: AgendaDocRequest) -> None:
+    normal_style = document.styles["Normal"]
+    normal_style.font.name = payload.style.body_font
+    normal_style.font.size = Pt(payload.style.body_size_pt)
+    normal_style._element.rPr.rFonts.set(
+        qn("w:eastAsia"), payload.style.body_font)
 
+
+def _add_title_paragraph(document: Document, payload: AgendaDocRequest) -> None:
+    paragraph = document.add_paragraph()
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_paragraph_spacing(
+        paragraph,
+        payload.style.line_spacing,
+        payload.style.title_size_pt,
+    )
+    paragraph.paragraph_format.space_after = Pt(30)
+
+    run = paragraph.add_run(payload.title)
+    _set_run_font(
+        run,
+        font_name=payload.style.title_font,
+        size_pt=payload.style.title_size_pt,
+        bold=payload.style.title_bold,
+    )
+
+
+def _add_meta_paragraphs(document: Document, payload: AgendaDocRequest) -> None:
     for item in payload.meta:
-        paragraph = subdoc.add_paragraph()
+        paragraph = document.add_paragraph()
         _set_paragraph_spacing(
             paragraph,
             payload.style.line_spacing,
@@ -66,13 +92,9 @@ def _build_meta_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
             size_pt=payload.style.body_size_pt,
         )
 
-    return subdoc
 
-
-def _build_agenda_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
-    subdoc = tpl.new_subdoc()
-
-    heading = subdoc.add_paragraph()
+def _add_agenda_paragraphs(document: Document, payload: AgendaDocRequest) -> None:
+    heading = document.add_paragraph()
     _set_paragraph_spacing(
         heading,
         payload.style.line_spacing,
@@ -87,7 +109,7 @@ def _build_agenda_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
     )
 
     for item in payload.agenda:
-        paragraph = subdoc.add_paragraph()
+        paragraph = document.add_paragraph()
         _set_paragraph_spacing(
             paragraph,
             payload.style.line_spacing,
@@ -121,29 +143,16 @@ def _build_agenda_subdoc(tpl: DocxTemplate, payload: AgendaDocRequest):
             size_pt=payload.style.body_size_pt,
         )
 
-    return subdoc
-
 
 def render_agenda_docx(payload: AgendaDocRequest, template_path: Path) -> bytes:
-    tpl = DocxTemplate(template_path)
-
-    title_rich = RichText()
-    title_rich.add(
-        payload.title,
-        font=payload.style.title_font,
-        size=payload.style.title_size_pt * 2,
-        bold=payload.style.title_bold,
-    )
-
-    context = {
-        "title": title_rich,
-        "meta_subdoc": _build_meta_subdoc(tpl, payload),
-        "agenda_subdoc": _build_agenda_subdoc(tpl, payload),
-    }
-
-    tpl.render(context)
+    _ = template_path
+    document = Document()
+    _set_document_default_style(document, payload)
+    _add_title_paragraph(document, payload)
+    _add_meta_paragraphs(document, payload)
+    _add_agenda_paragraphs(document, payload)
 
     output = BytesIO()
-    tpl.save(output)
+    document.save(output)
     output.seek(0)
     return output.getvalue()
