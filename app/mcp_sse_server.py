@@ -46,18 +46,18 @@ def _bootstrap_runtime() -> None:
 
 
 def _build_style(
-    title_font: str | None,
-    body_font: str | None,
-    title_size_pt: float | None,
-    body_size_pt: float | None,
-    line_spacing: float | None,
-    title_bold: bool | None,
-    label_bold: bool | None,
-    indent_level1_chars: float | None,
-    indent_level2_chars: float | None,
-    indent_level3_chars: float | None,
+    title_font: str,
+    body_font: str,
+    title_size_pt: float,
+    body_size_pt: float,
+    line_spacing: float,
+    title_bold: bool,
+    label_bold: bool,
+    indent_level1_chars: float,
+    indent_level2_chars: float,
+    indent_level3_chars: float,
 ) -> dict[str, Any]:
-    style = {
+    return {
         "title_font": title_font,
         "body_font": body_font,
         "title_size_pt": title_size_pt,
@@ -69,7 +69,6 @@ def _build_style(
         "indent_level2_chars": indent_level2_chars,
         "indent_level3_chars": indent_level3_chars,
     }
-    return {key: value for key, value in style.items() if value is not None}
 
 
 @mcp.tool(
@@ -79,7 +78,7 @@ def _build_style(
         "仅接受顶层平铺参数：title/meta/agenda/filename 与 style 相关可选字段；禁止使用 params 包裹层。"
         "参数类型：title(str, 必填)、meta(list[object], 必填)、"
         "agenda(list[object], 必填)、"
-        "filename(str, 可选)、title_font(str, 可选)、body_font(str, 可选)、title_size_pt(number, 可选)、body_size_pt(number, 可选)、line_spacing(number, 可选)、title_bold(bool, 可选)、label_bold(bool, 可选)、indent_level1_chars(number, 可选)、indent_level2_chars(number, 可选)、indent_level3_chars(number, 可选)。"
+        "filename(str, 可选)、title_font(str, 默认黑体)、body_font(str, 默认仿宋)、title_size_pt(number, 默认21.5)、body_size_pt(number, 默认15.5)、line_spacing(number, 默认1.0)、title_bold(bool, 默认true)、label_bold(bool, 默认true)、indent_level1_chars(number, 默认2.0)、indent_level2_chars(number, 默认4.0)、indent_level3_chars(number, 默认6.0)。"
         "示例请求：{\"title\":\"4月16日处务例会\",\"meta\":[{\"label\":\"时间\",\"value\":\"2023-04-16 14:00\"}],\"agenda\":[{\"text\":\"一、尚网办项目\",\"level\":1}],\"title_font\":\"黑体\",\"body_font\":\"仿宋\",\"line_spacing\":1.0,\"filename\":\"4月16日处务例会议程.docx\"}。"
         "返回 code/success/message/data，其中 data 包含 file_id、filename、download_url。"
     ),
@@ -89,16 +88,16 @@ def generate_meeting_agenda_docx(
     meta: list[dict[str, str]],
     agenda: list[dict[str, Any]],
     filename: str = "meeting_agenda.docx",
-    title_font: str | None = None,
-    body_font: str | None = None,
-    title_size_pt: float | None = None,
-    body_size_pt: float | None = None,
-    line_spacing: float | None = None,
-    title_bold: bool | None = None,
-    label_bold: bool | None = None,
-    indent_level1_chars: float | None = None,
-    indent_level2_chars: float | None = None,
-    indent_level3_chars: float | None = None,
+    title_font: str = "黑体",
+    body_font: str = "仿宋",
+    title_size_pt: float = 21.5,
+    body_size_pt: float = 15.5,
+    line_spacing: float = 1.0,
+    title_bold: bool = True,
+    label_bold: bool = True,
+    indent_level1_chars: float = 2.0,
+    indent_level2_chars: float = 4.0,
+    indent_level3_chars: float = 6.0,
 ) -> dict[str, Any]:
     """生成会议议程 DOCX。
 
@@ -107,7 +106,7 @@ def generate_meeting_agenda_docx(
     - 顶层仅使用：`title`、`meta`、`agenda`、`filename` 与各个样式可选字段。
     - `meta` 为必填，类型：`list[dict[str, str]]`，每项至少包含 `label` 和 `value`。
     - `agenda` 为必填，类型：`list[dict[str, Any]]`，每项至少包含 `text`，可选 `level`、`leading_bold`。
-    - 样式字段均为可选，支持：`title_font`、`body_font`、`title_size_pt`、`body_size_pt`、`line_spacing`、`title_bold`、`label_bold`、`indent_level1_chars`、`indent_level2_chars`、`indent_level3_chars`。
+    - 样式字段均提供默认值，支持：`title_font`、`body_font`、`title_size_pt`、`body_size_pt`、`line_spacing`、`title_bold`、`label_bold`、`indent_level1_chars`、`indent_level2_chars`、`indent_level3_chars`。
     - 不建议使用未声明字段（如 `item`、`responsible`、`topic`、`speaker`），可能导致最终业务校验失败。
 
     参数说明：
@@ -115,10 +114,10 @@ def generate_meeting_agenda_docx(
     - meta: 必填，类型 `list[dict[str, str]]`，标准数组：[ {"label": "时间", "value": "2026-04-20"} ]。
     - agenda: 必填，类型 `list[dict[str, Any]]`，标准数组项：{"text": "一、开场", "level": 1, "leading_bold": "一、"}。
     - filename: 可选，导出文件名，默认 `meeting_agenda.docx`。
-    - title_font/body_font: 可选，字体名称。
-    - title_size_pt/body_size_pt/line_spacing: 可选，数字类型。
-    - title_bold/label_bold: 可选，布尔类型。
-    - indent_level1_chars/indent_level2_chars/indent_level3_chars: 可选，数字类型。
+    - title_font/body_font: 字体名称，默认分别为 `黑体`、`仿宋`。
+    - title_size_pt/body_size_pt/line_spacing: 数字类型，默认分别为 `21.5`、`15.5`、`1.0`。
+    - title_bold/label_bold: 布尔类型，默认均为 `true`。
+    - indent_level1_chars/indent_level2_chars/indent_level3_chars: 数字类型，默认分别为 `2.0`、`4.0`、`6.0`。
 
     请求示例（平铺式）：
     {
