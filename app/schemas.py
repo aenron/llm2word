@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -36,7 +36,9 @@ class RenderStyle(BaseModel):
 
 class AgendaDocRequest(BaseModel):
     title: str
+    meeting_type: Literal["通知", "工作专题会议"] = "通知"
     meta: list[MetaItem] = Field(default_factory=list)
+    attendees: list[str] = Field(default_factory=list)
     agenda: list[AgendaItem] = Field(default_factory=list)
     style: RenderStyle = Field(default_factory=RenderStyle)
     filename: str = Field("meeting_agenda.docx", description="返回文件名")
@@ -44,6 +46,8 @@ class AgendaDocRequest(BaseModel):
     @field_validator("meta", mode="before")
     @classmethod
     def parse_meta(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("meta 不能为 null")
         if isinstance(value, str):
             text = value.strip()
             if not text:
@@ -57,6 +61,8 @@ class AgendaDocRequest(BaseModel):
     @field_validator("agenda", mode="before")
     @classmethod
     def parse_agenda(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("agenda 不能为 null")
         if isinstance(value, str):
             text = value.strip()
             if not text:
@@ -67,9 +73,26 @@ class AgendaDocRequest(BaseModel):
                 raise ValueError("agenda 不是合法的 JSON 字符串") from exc
         return value
 
+    @field_validator("attendees", mode="before")
+    @classmethod
+    def parse_attendees(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("attendees 不能为 null")
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError("attendees 不是合法的 JSON 字符串") from exc
+        return value
+
     @field_validator("style", mode="before")
     @classmethod
     def parse_style(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("style 不能为 null")
         if isinstance(value, str):
             text = value.strip()
             if not text:

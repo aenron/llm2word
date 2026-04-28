@@ -32,30 +32,54 @@ python -m app.mcp_sse_server
 参数说明：
 
 - `title`：必填，会议标题。
-- `meta`：可选，会议信息数组，每项 `{"label": "时间", "value": "..."}`。
-- `agenda`：可选，议程数组，每项 `{"text": "...", "level": 1, "leading_bold": "..."}`。
-- `style`：可选，样式对象（字体、字号、行距、缩进等）。
+- `meeting_type`：可选，会议类型，默认 `通知`，当前支持 `通知`、`工作专题会议`。
+- `meta`：必填，会议信息数组，每项 `{"label": "时间", "value": "..."}`。
+- `attendees`：可选，出席人员数组，默认 `[]`，不能为 `null`。仅 `工作专题会议` 使用。
+- `agenda`：必填，议程数组，每项 `{"text": "...", "level": 1, "leading_bold": "..."}`。
 - `filename`：可选，导出文件名，默认 `meeting_agenda.docx`。
+
+说明：
+
+- MCP 工具不再对外暴露样式字段。
+- 服务端会根据 `meeting_type` 自动选择内置样式配置。
+- `通知` 类型对应现有段落式样式。
+- `工作专题会议` 类型会生成带表格的通知单样式，建议在 `meta` 中传入 `时间`、`地点`、`主持人`，并通过 `attendees` 传入出席人员。
+- 所有字段都不允许传 `null`；无内容的列表字段请传 `[]`。
 
 调用示例（平铺式）：
 
 ```json
 {
   "title": "上海社科院智算服务平台建设专家座谈会",
+  "meeting_type": "通知",
   "meta": [
     {"label": "时　间", "value": "2026年4月3日(周五)13:30"}
   ],
+  "attendees": [],
   "agenda": [
     {"text": "一、专家发言", "level": 1}
   ],
-  "style": {
-    "title_font": "黑体",
-    "body_font": "仿宋",
-    "title_size_pt": 21.5,
-    "body_size_pt": 15.5,
-    "line_spacing": 1.0
-  },
   "filename": "专家会议程.docx"
+}
+```
+
+`工作专题会议` 示例：
+
+```json
+{
+  "title": "智算平台建设工作专题会",
+  "meeting_type": "工作专题会议",
+  "meta": [
+    {"label": "时间", "value": "2026年4月3日 13:30"},
+    {"label": "地点", "value": "105会议室"},
+    {"label": "主持人", "value": "张三"}
+  ],
+  "attendees": ["相关部门负责人", "项目组成员"],
+  "agenda": [
+    {"text": "一、汇报项目总体进展", "level": 1},
+    {"text": "二、讨论当前问题与解决方案", "level": 1}
+  ],
+  "filename": "工作专题会议.docx"
 }
 ```
 
