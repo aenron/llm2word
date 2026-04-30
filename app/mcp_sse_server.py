@@ -7,7 +7,11 @@ from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 import uvicorn
-from mcp.server.transport_security import TransportSecuritySettings
+
+try:
+    from mcp.server.transport_security import TransportSecuritySettings
+except ModuleNotFoundError:  # Compatibility fallback for MCP builds without this module.
+    TransportSecuritySettings = None
 
 from app.docx_service import (
     GENERATED_DIR,
@@ -19,9 +23,9 @@ from app.docx_service import (
 from app.schemas import AgendaDocRequest
 from app.template_builder import ensure_template_exists
 
-mcp = FastMCP(
-    "llm2word-mcp",
-    transport_security=TransportSecuritySettings(
+_transport_security = None
+if TransportSecuritySettings is not None:
+    _transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=[
             "127.0.0.1:8000",
@@ -33,8 +37,9 @@ mcp = FastMCP(
             "http://localhost:8000",
             "http://59.110.150.224:8000",
         ],
-    ),
-)
+    )
+
+mcp = FastMCP("llm2word-mcp", transport_security=_transport_security)
 
 MCP_DOWNLOAD_BASE_URL = os.getenv(
     "MCP_DOWNLOAD_BASE_URL", "http://127.0.0.1:8000")
