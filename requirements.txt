@@ -1,9 +1,7 @@
-fastapi==0.115.0
-starlette==0.38.6
-uvicorn==0.30.6
+fastapi
+uvicorn
 docxtpl==0.18.0
 python-docx==1.1.2
-pydantic==2.11.7
 pypinyin==0.53.0
 fastmcp==3.2.4
 mcp==1.27.0
