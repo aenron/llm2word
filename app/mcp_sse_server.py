@@ -23,20 +23,34 @@ from app.docx_service import (
 from app.schemas import AgendaDocRequest
 from app.template_builder import ensure_template_exists
 
+def _parse_csv_env(name: str, default: list[str]) -> list[str]:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    items = [item.strip() for item in raw.split(",")]
+    return [item for item in items if item]
+
+
+DEFAULT_ALLOWED_HOSTS = [
+    "127.0.0.1:8000",
+    "localhost:8000",
+    "59.110.150.224:8000",
+]
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://59.110.150.224:8000",
+]
+
+ALLOWED_HOSTS = _parse_csv_env("MCP_ALLOWED_HOSTS", DEFAULT_ALLOWED_HOSTS)
+ALLOWED_ORIGINS = _parse_csv_env("MCP_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
+
 _transport_security = None
 if TransportSecuritySettings is not None:
     _transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=[
-            "127.0.0.1:8000",
-            "localhost:8000",
-            "59.110.150.224:8000",
-        ],
-        allowed_origins=[
-            "http://127.0.0.1:8000",
-            "http://localhost:8000",
-            "http://59.110.150.224:8000",
-        ],
+        allowed_hosts=ALLOWED_HOSTS,
+        allowed_origins=ALLOWED_ORIGINS,
     )
 
 mcp = FastMCP("llm2word-mcp", transport_security=_transport_security)

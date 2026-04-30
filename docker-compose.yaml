@@ -8,4 +8,6 @@ services:
       - "8000:8000"
     environment:
       MCP_DOWNLOAD_BASE_URL: "${MCP_DOWNLOAD_BASE_URL:-http://127.0.0.1:8000}"
+      MCP_ALLOWED_HOSTS: "${MCP_ALLOWED_HOSTS:-127.0.0.1:8000,localhost:8000,59.110.150.224:8000}"
+      MCP_ALLOWED_ORIGINS: "${MCP_ALLOWED_ORIGINS:-http://127.0.0.1:8000,http://localhost:8000,http://59.110.150.224:8000}"
     restart: unless-stopped
