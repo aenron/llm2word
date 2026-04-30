@@ -1,0 +1,11 @@
+services:
+  mcp-sse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm2word-mcp-sse
+    ports:
+      - "8000:8000"
+    environment:
+      MCP_DOWNLOAD_BASE_URL: "${MCP_DOWNLOAD_BASE_URL:-http://127.0.0.1:8000}"
+    restart: unless-stopped

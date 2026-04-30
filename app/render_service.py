@@ -256,35 +256,23 @@ def _append_attendees_to_cell(cell, payload: AgendaDocRequest) -> None:
         bold=True,
     )
 
+    attendees_text = ""
     if payload.attendees:
-        for attendee in payload.attendees:
-            paragraph = cell.add_paragraph()
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            _set_paragraph_spacing(
-                paragraph,
-                payload.style.line_spacing,
-                payload.style.body_size_pt,
-            )
-            paragraph.paragraph_format.left_indent = Pt(42)
-            run = paragraph.add_run(attendee)
-            _set_run_font(
-                run,
-                font_name=payload.style.body_font,
-                size_pt=payload.style.body_size_pt,
-            )
-        return
+        attendees_text = "、".join(payload.attendees)
+    else:
+        attendees_text = _get_meta_value(
+            payload, "出席范围", "出席", "参会范围", "参会人员", "参加范围")
 
-    attendance_value = _get_meta_value(payload, "出席范围", "出席", "参会范围", "参会人员", "参加范围")
-    if attendance_value:
+    if attendees_text:
         paragraph = cell.add_paragraph()
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _set_paragraph_spacing(
             paragraph,
             payload.style.line_spacing,
             payload.style.body_size_pt,
         )
-        paragraph.paragraph_format.left_indent = Pt(42)
-        run = paragraph.add_run(attendance_value)
+        paragraph.paragraph_format.space_before = Pt(18)
+        run = paragraph.add_run(attendees_text)
         _set_run_font(
             run,
             font_name=payload.style.body_font,
